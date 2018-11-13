@@ -1,2 +1,3 @@
-# ethup
-EthUp Smart Contract (https://ethup.io)
+# EthUp Smart Contracts
+
+# Details
