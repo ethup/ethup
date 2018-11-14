@@ -1,0 +1,50 @@
+contracts/.placeholder
+test/.placeholder
+deploy_mnemonic.key
+
+*.swp
+*.swo
+
+# Logs
+logs
+*.log
+
+# Runtime data
+pids
+*.pid
+*.seed
+allFiredEvents
+scTopics
+
+# Coverage directory used by tools like istanbul & mocha
+coverage
+coverage.json
+coverageEnv
+shippable
+
+# node-waf configuration
+.lock-wscript
+
+# Dependency directory
+node_modules
+
+# Debug log from npm
+npm-debug.log
+
+# local env variables
+.env
+
+# truffle build directory
+build/
+
+# lol macs
+.DS_Store/
+
+# truffle
+.node-xmlhttprequest-*
+
+# Generated files
+config/development/contracts.json
+config/development/*.sol.js
+config/test/contracts.json
+dist

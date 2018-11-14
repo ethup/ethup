@@ -1,0 +1,26 @@
+{
+  "name": "ethup",
+  "version": "1.0.0",
+  "description": "",
+  "main": "truffle.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "babel-polyfill": "^6.26.0",
+    "babel-register": "^6.26.0",
+    "dotenv": "^6.1.0",
+    "ethereumjs-wallet": "^0.6.2",
+    "openzeppelin-solidity": "^2.0.0",
+    "truffle-hdwallet-provider": "0.0.6",
+    "zeppelin-solidity": "1.12.0"
+  },
+  "devDependencies": {
+    "solidity-coverage": "^0.5.11"
+  }
+}
