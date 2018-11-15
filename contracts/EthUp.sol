@@ -147,8 +147,8 @@ contract EthUp is Accessibility {
         dividends = calcDividends(investorAddr);
     }
 
-    function getDailyPercentAtNow() public view returns(uint numerator, uint denominator) {
-        InvestorsStorage.Investor memory investor = getMemInvestor(msg.sender);
+    function getDailyPercentAtNow(address investorAddr) public view returns(uint numerator, uint denominator) {
+        InvestorsStorage.Investor memory investor = getMemInvestor(investorAddr);
 
         Percent.percent memory p = getDailyPercent(investor.investment);
         (numerator, denominator) = (p.num, p.den);
@@ -266,7 +266,7 @@ contract EthUp is Accessibility {
 
     function calcDividends(address investorAddr) internal view returns(uint dividends) {
         InvestorsStorage.Investor memory investor = getMemInvestor(investorAddr);
-        uint interval = 1 minutes;
+        uint interval = 1 days;
         uint pastTime = now.sub(investor.paymentTime);
 
         // safe gas if dividends will be 0
