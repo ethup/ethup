@@ -5,9 +5,9 @@ import "./Accessibility.sol";
 contract InvestorsStorage is Accessibility {
 
     struct Dividends {
-        uint value;
+        uint value;     //paid
         uint limit;
-        uint deferred;
+        uint deferred;  //not paid yet
     }
 
     struct Investor {
