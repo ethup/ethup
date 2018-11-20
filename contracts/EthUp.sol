@@ -8,7 +8,6 @@ pragma solidity 0.4.24;
  */
 
 import "./InvestorsStorage.sol";
-import "./Math.sol";
 import "./SafeMath.sol";
 import "./Percent.sol";
 import "./Accessibility.sol";
@@ -32,7 +31,7 @@ contract EthUp is Accessibility {
     uint public investmentsNumber;
     uint public constant MIN_INVESTMENT = 10 finney; // 0.01 eth
     uint public constant MAX_INVESTMENT = 50 ether;
-    uint public constant MAX_BALANCE = 1e6 ether; // 1 000 000 eth
+    uint public constant MAX_BALANCE = 1e5 ether; // 100 000 eth
 
     // percents
     Percent.percent private m_1_percent = Percent.percent(1, 100);          //  1/100   *100% = 1%
@@ -53,7 +52,7 @@ contract EthUp is Accessibility {
     // more events for easy read from blockchain
     event LogSendExcessOfEther(address indexed addr, uint when, uint value, uint investment, uint excess);
     event LogNewInvestor(address indexed addr, uint when);
-    event LogNewInvesment(address indexed addr, uint when, uint investment, uint value);
+    event LogNewInvestment(address indexed addr, uint when, uint investment, uint value);
     event LogNewReferral(address indexed addr, address indexed referrerAddr, uint when, uint refBonus);
     event LogReinvest(address indexed addr, uint when, uint investment);
     event LogPayDividends(address indexed addr, uint when, uint value);
@@ -88,6 +87,11 @@ contract EthUp is Accessibility {
 
         // sender do invest
         doInvest(msg.data.toAddress());
+    }
+
+    function doDisown() public onlyOwner {
+        disown();
+        emit LogDisown(now);
     }
 
     function investorsNumber() public view returns(uint) {
@@ -168,7 +172,7 @@ contract EthUp is Accessibility {
         assert(m_investors.setPaymentTime(msg.sender, now));
 
         // check enough eth
-        if (address(this).balance <= dividends) {
+        if (address(this).balance < dividends) {
             dividends = address(this).balance;
         }
 
@@ -185,21 +189,19 @@ contract EthUp is Accessibility {
         uint receivedEther = msg.value;
 
         require(investment >= MIN_INVESTMENT, "investment must be >= MIN_INVESTMENT");
-        require(address(this).balance <= MAX_BALANCE, "the contract eth balance limit");
-
-        investment = Math.min(investment, MAX_INVESTMENT);
+        require(address(this).balance + investment <= MAX_BALANCE, "the contract eth balance limit");
 
         // send excess of ether if needed
-        if (receivedEther > investment) {
-            uint excess = receivedEther - investment;
+        if (receivedEther > MAX_INVESTMENT) {
+            uint excess = receivedEther - MAX_INVESTMENT;
             msg.sender.transfer(excess);
-            receivedEther = investment;
-            emit LogSendExcessOfEther(msg.sender, now, msg.value, investment, excess);
+            investment = MAX_INVESTMENT;
+            emit LogSendExcessOfEther(msg.sender, now, receivedEther, investment, excess);
         }
 
         // commission
-        advertisingAddress.send(m_advertisingPercent.mul(receivedEther));
-        adminsAddress.send(m_adminsPercent.mul(receivedEther));
+        advertisingAddress.transfer(m_advertisingPercent.mul(investment));
+        adminsAddress.transfer(m_adminsPercent.mul(investment));
 
         bool senderIsInvestor = m_investors.isInvestor(msg.sender);
 
@@ -211,7 +213,7 @@ contract EthUp is Accessibility {
             // add referral bonus to investor`s and referral`s investments
             uint refBonus = getRefBonusPercent().mmul(investment);
             assert(m_investors.addInvestment(referrerAddr, refBonus)); // add referrer bonus
-            investment += refBonus;                                    // add referral bonus
+            investment = investment.add(refBonus);                     // add referral bonus
             emit LogNewReferral(msg.sender, referrerAddr, now, refBonus);
         }
 
@@ -223,7 +225,7 @@ contract EthUp is Accessibility {
             InvestorsStorage.Investor memory investor = getMemInvestor(msg.sender);
             if (investor.dividends.value == investor.dividends.limit) {
                 uint reinvestBonus = getReinvestBonusPercent().mmul(investment);
-                investment += reinvestBonus;
+                investment = investment.add(reinvestBonus);
                 maxDividends = getMaxDepositPercent().mmul(investment);
                 // reinvest
                 assert(m_investors.setNewInvestment(msg.sender, investment, maxDividends));
@@ -246,7 +248,7 @@ contract EthUp is Accessibility {
         }
 
         investmentsNumber++;
-        emit LogNewInvesment(msg.sender, now, investment, receivedEther);
+        emit LogNewInvestment(msg.sender, now, investment, receivedEther);
     }
 
     function setAdvertisingAddress(address addr) public onlyOwner {
@@ -282,19 +284,19 @@ contract EthUp is Accessibility {
         Percent.percent memory p = getDailyPercent(investor.investment);
         Percent.percent memory c = Percent.percent(p.num + p.den, p.den);
 
-        uint intervals = (pastTime / interval);
-        uint totalDividends = investor.dividends.limit + investor.investment - investor.dividends.value - investor.dividends.deferred;
+        uint intervals = pastTime.div(interval);
+        uint totalDividends = investor.dividends.limit.add(investor.investment).sub(investor.dividends.value).sub(investor.dividends.deferred);
 
         dividends = investor.investment;
         for(uint i = 0; i < intervals; i++) {
             dividends = c.mmul(dividends);
             if (dividends > totalDividends) {
-                dividends = totalDividends + investor.dividends.deferred;
+                dividends = totalDividends.add(investor.dividends.deferred);
                 break;
             }
         }
 
-        dividends -= investor.investment;
+        dividends = dividends.sub(investor.investment);
 
         //uint totalDividends = dividends + investor.dividends;
         //if (totalDividends >= investor.dividendsLimit) {
