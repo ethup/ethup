@@ -15,11 +15,11 @@ library Percent {
         if (a == 0) {
             return 0;
         }
-        return a*p.num/p.den;
+        return a.mul(p.num).div(p.den);
     }
 
     function div(percent storage p, uint a) internal view returns (uint) {
-        return a/p.num*p.den;
+        return a.div(p.num).mul(p.den);
     }
 
     function sub(percent storage p, uint a) internal view returns (uint) {
@@ -27,11 +27,11 @@ library Percent {
         if (b >= a) {
             return 0; // solium-disable-line lbrace
         }
-        return a - b;
+        return a.sub(b);
     }
 
     function add(percent storage p, uint a) internal view returns (uint) {
-        return a + mul(p, a);
+        return a.add(mul(p, a));
     }
 
     function toMemory(percent storage p) internal view returns (Percent.percent memory) {
@@ -43,11 +43,11 @@ library Percent {
         if (a == 0) {
             return 0;
         }
-        return a*p.num/p.den;
+        return a.mul(p.num).div(p.den);
     }
 
     function mdiv(percent memory p, uint a) internal pure returns (uint) {
-        return a/p.num*p.den;
+        return a.div(p.num).mul(p.den);
     }
 
     function msub(percent memory p, uint a) internal pure returns (uint) {
@@ -55,10 +55,10 @@ library Percent {
         if (b >= a) {
             return 0;
         }
-        return a - b;
+        return a.sub(b);
     }
 
     function madd(percent memory p, uint a) internal pure returns (uint) {
-        return a + mmul(p, a);
+        return a.add(mmul(p, a));
     }
 }

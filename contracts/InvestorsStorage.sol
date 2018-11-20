@@ -1,8 +1,10 @@
 pragma solidity 0.4.24;
 
 import "./Accessibility.sol";
+import "./SafeMath.sol";
 
 contract InvestorsStorage is Accessibility {
+    using SafeMath for uint;
 
     struct Dividends {
         uint value;     //paid
@@ -47,7 +49,7 @@ contract InvestorsStorage is Accessibility {
         if (investors[addr].investment == 0) {
             return false;
         }
-        investors[addr].investment += investment;
+        investors[addr].investment = investors[addr].investment.add(investment);
         return true;
     }
 
@@ -63,7 +65,7 @@ contract InvestorsStorage is Accessibility {
         if (investors[addr].investment == 0) {
           return false;
         }
-        investors[addr].dividends.deferred += dividends;
+        investors[addr].dividends.deferred = investors[addr].dividends.deferred.add(dividends);
         return true;
     }
 
@@ -74,7 +76,7 @@ contract InvestorsStorage is Accessibility {
         if (investors[addr].dividends.value + dividends > investors[addr].dividends.limit) {
             investors[addr].dividends.value = investors[addr].dividends.limit;
         } else {
-            investors[addr].dividends.value += dividends;
+            investors[addr].dividends.value = investors[addr].dividends.value.add(dividends);
         }
         return true;
     }
@@ -96,7 +98,7 @@ contract InvestorsStorage is Accessibility {
         if (investors[addr].investment == 0) {
             return false;
         }
-        investors[addr].dividends.limit += limit;
+        investors[addr].dividends.limit = investors[addr].dividends.limit.add(limit);
 
         return true;
     }
