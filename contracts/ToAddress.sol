@@ -4,7 +4,7 @@ pragma solidity 0.4.24;
 library ToAddress {
 
     function toAddress(bytes source) internal pure returns(address addr) {
-        assembly { addr := mload(add(source,0x14)) }
+        assembly { addr := mload(add(source, 0x14)) }
         return addr;
     }
 

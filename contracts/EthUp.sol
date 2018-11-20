@@ -142,16 +142,53 @@ contract EthUp is Accessibility {
         (numerator, denominator) = (m_maxDepositPercent.num, m_maxDepositPercent.den);
     }
 
-    function investorInfo(address investorAddr) public view returns(uint investment, uint paymentTime, uint dividends, uint dividendsLimit, uint dividendsDeferred, bool isReferral) {
-        (investment, paymentTime, dividends, dividendsLimit, dividendsDeferred) = m_investors.investorInfo(investorAddr);
+    function investorInfo(
+        address investorAddr
+    )
+        public
+        view
+        returns (
+            uint investment,
+            uint paymentTime,
+            uint dividends,
+            uint dividendsLimit,
+            uint dividendsDeferred,
+            bool isReferral
+        )
+    {
+        (
+            investment,
+            paymentTime,
+            dividends,
+            dividendsLimit,
+            dividendsDeferred
+        ) = m_investors.investorInfo(investorAddr);
+
         isReferral = m_referrals[investorAddr];
     }
 
-    function getInvestorDividendsAtNow(address investorAddr) public view returns(uint dividends) {// view returns(uint dividends) {
+    function getInvestorDividendsAtNow(
+        address investorAddr
+    )
+        public
+        view
+        returns (
+            uint dividends
+        )
+    {
         dividends = calcDividends(investorAddr);
     }
 
-    function getDailyPercentAtNow(address investorAddr) public view returns(uint numerator, uint denominator) {
+    function getDailyPercentAtNow(
+        address investorAddr
+    )
+        public
+        view
+        returns (
+            uint numerator,
+            uint denominator
+        )
+    {
         InvestorsStorage.Investor memory investor = getMemInvestor(investorAddr);
 
         Percent.percent memory p = getDailyPercent(investor.investment);
@@ -166,7 +203,7 @@ contract EthUp is Accessibility {
     function getMyDividends() public notFromContract balanceChanged {
         // calculate dividends
         uint dividends = calcDividends(msg.sender);
-        require (dividends.notZero(), "cannot to pay zero dividends");
+        require(dividends.notZero(), "cannot to pay zero dividends");
 
         // update investor payment timestamp
         assert(m_investors.setPaymentTime(msg.sender, now));
@@ -194,26 +231,29 @@ contract EthUp is Accessibility {
         // send excess of ether if needed
         if (receivedEther > MAX_INVESTMENT) {
             uint excess = receivedEther - MAX_INVESTMENT;
-            msg.sender.transfer(excess);
             investment = MAX_INVESTMENT;
+            msg.sender.transfer(excess);
             emit LogSendExcessOfEther(msg.sender, now, receivedEther, investment, excess);
         }
 
         // commission
-        advertisingAddress.transfer(m_advertisingPercent.mul(investment));
-        adminsAddress.transfer(m_adminsPercent.mul(investment));
+        uint advertisingCommission = m_advertisingPercent.mul(investment);
+        uint adminsCommission = m_adminsPercent.mul(investment);
 
         bool senderIsInvestor = m_investors.isInvestor(msg.sender);
 
         // ref system works only once and only on first invest
-        if (referrerAddr.notZero() && !senderIsInvestor && !m_referrals[msg.sender] &&
-            referrerAddr != msg.sender && m_investors.isInvestor(referrerAddr)) {
+        if (referrerAddr.notZero() &&
+            !senderIsInvestor &&
+            !m_referrals[msg.sender] &&
+            referrerAddr != msg.sender &&
+            m_investors.isInvestor(referrerAddr)) {
 
-            m_referrals[msg.sender] = true;
             // add referral bonus to investor`s and referral`s investments
             uint refBonus = getRefBonusPercent().mmul(investment);
             assert(m_investors.addInvestment(referrerAddr, refBonus)); // add referrer bonus
             investment = investment.add(refBonus);                     // add referral bonus
+            m_referrals[msg.sender] = true;
             emit LogNewReferral(msg.sender, referrerAddr, now, refBonus);
         }
 
@@ -248,6 +288,8 @@ contract EthUp is Accessibility {
         }
 
         investmentsNumber++;
+        advertisingAddress.transfer(advertisingCommission);
+        adminsAddress.transfer(adminsCommission);
         emit LogNewInvestment(msg.sender, now, investment, receivedEther);
     }
 
@@ -261,9 +303,31 @@ contract EthUp is Accessibility {
         adminsAddress = addr;
     }
 
-    function getMemInvestor(address investorAddr) internal view returns(InvestorsStorage.Investor memory) {
-        (uint investment, uint paymentTime, uint dividends, uint dividendsLimit, uint dividendsDeferred) = m_investors.investorInfo(investorAddr);
-        return InvestorsStorage.Investor(investment, paymentTime, InvestorsStorage.Dividends(dividends, dividendsLimit, dividendsDeferred));
+    function getMemInvestor(
+        address investorAddr
+    )
+        internal
+        view
+        returns (
+            InvestorsStorage.Investor memory
+        )
+    {
+        (
+            uint investment,
+            uint paymentTime,
+            uint dividends,
+            uint dividendsLimit,
+            uint dividendsDeferred
+        ) = m_investors.investorInfo(investorAddr);
+
+        return InvestorsStorage.Investor(
+            investment,
+            paymentTime,
+            InvestorsStorage.Dividends(
+                dividends,
+                dividendsLimit,
+                dividendsDeferred)
+        );
     }
 
     function calcDividends(address investorAddr) internal view returns(uint dividends) {
@@ -288,7 +352,7 @@ contract EthUp is Accessibility {
         uint totalDividends = investor.dividends.limit.add(investor.investment).sub(investor.dividends.value).sub(investor.dividends.deferred);
 
         dividends = investor.investment;
-        for(uint i = 0; i < intervals; i++) {
+        for (uint i = 0; i < intervals; i++) {
             dividends = c.mmul(dividends);
             if (dividends > totalDividends) {
                 dividends = totalDividends.add(investor.dividends.deferred);

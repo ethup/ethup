@@ -3,6 +3,7 @@ pragma solidity 0.4.24;
 import "./Accessibility.sol";
 import "./SafeMath.sol";
 
+
 contract InvestorsStorage is Accessibility {
     using SafeMath for uint;
 
@@ -17,6 +18,7 @@ contract InvestorsStorage is Accessibility {
         uint paymentTime;
         Dividends dividends;
     }
+
     uint public size;
 
     mapping (address => Investor) private investors;
@@ -25,7 +27,19 @@ contract InvestorsStorage is Accessibility {
         return investors[addr].investment > 0;
     }
 
-    function investorInfo(address addr) public view returns(uint investment, uint paymentTime, uint value, uint limit, uint deferred) {
+    function investorInfo(
+        address addr
+    )
+        public
+        view
+        returns (
+            uint investment,
+            uint paymentTime,
+            uint value,
+            uint limit,
+            uint deferred
+        )
+    {
         investment = investors[addr].investment;
         paymentTime = investors[addr].paymentTime;
         value = investors[addr].dividends.value;
@@ -33,7 +47,18 @@ contract InvestorsStorage is Accessibility {
         deferred = investors[addr].dividends.deferred;
     }
 
-    function newInvestor(address addr, uint investment, uint paymentTime, uint dividendsLimit) public onlyOwner returns (bool) {
+    function newInvestor(
+        address addr,
+        uint investment,
+        uint paymentTime,
+        uint dividendsLimit
+    )
+        public
+        onlyOwner
+        returns (
+            bool
+        )
+    {
         Investor storage inv = investors[addr];
         if (inv.investment != 0 || investment == 0) {
             return false;
@@ -63,7 +88,7 @@ contract InvestorsStorage is Accessibility {
 
     function addDeferredDividends(address addr, uint dividends) public onlyOwner returns (bool) {
         if (investors[addr].investment == 0) {
-          return false;
+            return false;
         }
         investors[addr].dividends.deferred = investors[addr].dividends.deferred.add(dividends);
         return true;
@@ -71,7 +96,7 @@ contract InvestorsStorage is Accessibility {
 
     function addDividends(address addr, uint dividends) public onlyOwner returns (bool) {
         if (investors[addr].investment == 0) {
-          return false;
+            return false;
         }
         if (investors[addr].dividends.value + dividends > investors[addr].dividends.limit) {
             investors[addr].dividends.value = investors[addr].dividends.limit;
