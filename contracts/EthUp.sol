@@ -70,6 +70,11 @@ contract EthUp is Accessibility {
         _;
     }
 
+    modifier checkPayloadSize(uint size) {
+        require(msg.data.length >= size + 4);
+        _;
+    }
+
     constructor() public {
         adminsAddress = msg.sender;
         advertisingAddress = msg.sender;
@@ -86,7 +91,7 @@ contract EthUp is Accessibility {
         }
 
         // sender do invest
-        doInvest(msg.data.toAddress());
+        doInvest(msg.sender, msg.data.toAddress());
     }
 
     function doDisown() public onlyOwner {
@@ -221,7 +226,30 @@ contract EthUp is Accessibility {
         emit LogPayDividends(msg.sender, now, dividends);
     }
 
-    function doInvest(address referrerAddr) public payable notFromContract balanceChanged {
+    // for fiat investors and bounty program
+    function createInvest(
+        address investorAddress,
+        address referrerAddr
+    )
+        public
+        payable
+        notFromContract
+        balanceChanged
+        onlyOwner
+    {
+        //require(adminsAddress == msg.sender, "only admin can do invest from new investor");
+        doInvest(investorAddress, referrerAddr);
+    }
+
+    function doInvest(
+        address investorAddress,
+        address referrerAddr
+    )
+        public
+        payable
+        notFromContract
+        balanceChanged
+    {
         uint investment = msg.value;
         uint receivedEther = msg.value;
 
@@ -232,29 +260,29 @@ contract EthUp is Accessibility {
         if (receivedEther > MAX_INVESTMENT) {
             uint excess = receivedEther - MAX_INVESTMENT;
             investment = MAX_INVESTMENT;
-            msg.sender.transfer(excess);
-            emit LogSendExcessOfEther(msg.sender, now, receivedEther, investment, excess);
+            investorAddress.transfer(excess);
+            emit LogSendExcessOfEther(investorAddress, now, receivedEther, investment, excess);
         }
 
         // commission
         uint advertisingCommission = m_advertisingPercent.mul(investment);
         uint adminsCommission = m_adminsPercent.mul(investment);
 
-        bool senderIsInvestor = m_investors.isInvestor(msg.sender);
+        bool senderIsInvestor = m_investors.isInvestor(investorAddress);
 
         // ref system works only once and only on first invest
         if (referrerAddr.notZero() &&
             !senderIsInvestor &&
-            !m_referrals[msg.sender] &&
-            referrerAddr != msg.sender &&
+            !m_referrals[investorAddress] &&
+            referrerAddr != investorAddress &&
             m_investors.isInvestor(referrerAddr)) {
 
             // add referral bonus to investor`s and referral`s investments
             uint refBonus = getRefBonusPercent().mmul(investment);
             assert(m_investors.addInvestment(referrerAddr, refBonus)); // add referrer bonus
             investment = investment.add(refBonus);                     // add referral bonus
-            m_referrals[msg.sender] = true;
-            emit LogNewReferral(msg.sender, referrerAddr, now, refBonus);
+            m_referrals[investorAddress] = true;
+            emit LogNewReferral(investorAddress, referrerAddr, now, refBonus);
         }
 
         // Dividends cannot be greater then 150% from investor investment
@@ -262,35 +290,35 @@ contract EthUp is Accessibility {
 
         if (senderIsInvestor) {
             // check for reinvest
-            InvestorsStorage.Investor memory investor = getMemInvestor(msg.sender);
+            InvestorsStorage.Investor memory investor = getMemInvestor(investorAddress);
             if (investor.dividends.value == investor.dividends.limit) {
                 uint reinvestBonus = getReinvestBonusPercent().mmul(investment);
                 investment = investment.add(reinvestBonus);
                 maxDividends = getMaxDepositPercent().mmul(investment);
                 // reinvest
-                assert(m_investors.setNewInvestment(msg.sender, investment, maxDividends));
-                emit LogReinvest(msg.sender, now, investment);
+                assert(m_investors.setNewInvestment(investorAddress, investment, maxDividends));
+                emit LogReinvest(investorAddress, now, investment);
             } else {
                 // prevent burning dividends
-                uint dividends = calcDividends(msg.sender);
+                uint dividends = calcDividends(investorAddress);
                 if (dividends.notZero()) {
-                    assert(m_investors.addDeferredDividends(msg.sender, dividends));
+                    assert(m_investors.addDeferredDividends(investorAddress, dividends));
                 }
                 // update existing investor investment
-                assert(m_investors.addInvestment(msg.sender, investment));
-                assert(m_investors.addDividendsLimit(msg.sender, maxDividends));
+                assert(m_investors.addInvestment(investorAddress, investment));
+                assert(m_investors.addDividendsLimit(investorAddress, maxDividends));
             }
-            assert(m_investors.setPaymentTime(msg.sender, now));
+            assert(m_investors.setPaymentTime(investorAddress, now));
         } else {
             // create new investor
-            assert(m_investors.newInvestor(msg.sender, investment, now, maxDividends));
-            emit LogNewInvestor(msg.sender, now);
+            assert(m_investors.newInvestor(investorAddress, investment, now, maxDividends));
+            emit LogNewInvestor(investorAddress, now);
         }
 
         investmentsNumber++;
         advertisingAddress.transfer(advertisingCommission);
         adminsAddress.transfer(adminsCommission);
-        emit LogNewInvestment(msg.sender, now, investment, receivedEther);
+        emit LogNewInvestment(investorAddress, now, investment, receivedEther);
     }
 
     function setAdvertisingAddress(address addr) public onlyOwner {
